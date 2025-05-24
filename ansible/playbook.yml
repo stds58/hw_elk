@@ -1,0 +1,170 @@
+---
+# wsl ansible-playbook -i inventory.ini playbook.yml
+- name: Установка и настройка Elastic Stack
+  hosts: all
+  become: yes
+  vars:
+    elastic_version: "7.12.0"
+    elastic_deb_suffix: "amd64.deb"
+
+  tasks:
+    - name: Установка зависимостей
+      apt:
+        name:
+          - curl
+          - wget
+          - gnupg
+          - apt-transport-https
+        update_cache: yes
+
+    - name: Добавление GPG ключа Elastic
+      shell: |
+        curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch  | apt-key add -
+
+    - name: Добавление репозитория Elastic
+      lineinfile:
+        dest: /etc/apt/sources.list.d/elastic.list
+        line: "deb https://artifacts.elastic.co/packages/ {{ elastic_version.split('.')[0] }}.x/apt stable main"
+        create: yes
+
+    - name: Обновление пакетов
+      apt:
+        update_cache: yes
+
+    - name: Установка Elasticsearch
+      get_url:
+        url: "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch- {{ elastic_version }}-{{ elastic_deb_suffix }}"
+        dest: "/tmp/elasticsearch.deb"
+      register: elasticsearch_downloaded
+
+    - name: Инсталляция Elasticsearch .deb пакета
+      dpkg:
+        name: "/tmp/elasticsearch.deb"
+      when: elasticsearch_downloaded is changed
+
+    - name: Запуск и включение Elasticsearch
+      service:
+        name: elasticsearch
+        state: started
+        enabled: yes
+
+    - name: Проверка работы Elasticsearch
+      uri:
+        url: http://localhost:9200
+        status_code: 200
+
+    - name: Установка Kibana
+      get_url:
+        url: "https://artifacts.elastic.co/downloads/kibana/kibana- {{ elastic_version }}-{{ elastic_deb_suffix }}"
+        dest: "/tmp/kibana.deb"
+      register: kibana_downloaded
+
+    - name: Инсталляция Kibana .deb пакета
+      dpkg:
+        name: "/tmp/kibana.deb"
+      when: kibana_downloaded is changed
+
+    - name: Настройка Kibana (server.host)
+      lineinfile:
+        path: /etc/kibana/kibana.yml
+        regexp: '^# server.host'
+        line: 'server.host: "0.0.0.0"'
+
+    - name: Настройка Kibana (elasticsearch.hosts)
+      lineinfile:
+        path: /etc/kibana/kibana.yml
+        regexp: '^# elasticsearch.hosts'
+        line: 'elasticsearch.hosts: ["http://localhost:9200"]'
+
+    - name: Запуск и включение Kibana
+      service:
+        name: kibana
+        state: started
+        enabled: yes
+
+    - name: Остановка и отключение firewall
+      service:
+        name: "{{ item }}"
+        state: stopped
+        enabled: no
+      loop:
+        - ufw
+        - firewalld
+
+    - name: Установка auditd
+      apt:
+        name: auditd
+        state: present
+        update_cache: yes
+
+    - name: Перезапуск auditd
+      service:
+        name: auditd
+        state: restarted
+
+    - name: Установка Filebeat
+      get_url:
+        url: "https://artifacts.elastic.co/downloads/beats/filebeat/filebeat- {{ elastic_version }}-{{ elastic_deb_suffix }}"
+        dest: "/tmp/filebeat.deb"
+      register: filebeat_downloaded
+
+    - name: Инсталляция Filebeat .deb пакета
+      dpkg:
+        name: "/tmp/filebeat.deb"
+      when: filebeat_downloaded is changed
+
+    - name: Включение модуля auditd в Filebeat
+      command: filebeat modules enable auditd
+
+    - name: Настройка Kibana хоста в Filebeat
+      lineinfile:
+        path: /etc/filebeat/filebeat.yml
+        regexp: '^# setup.kibana.host'
+        line: 'setup.kibana.host: "localhost:5601"'
+
+    - name: Отключение вывода в Elasticsearch в Filebeat
+      replace:
+        path: /etc/filebeat/filebeat.yml
+        regexp: 'output.elasticsearch:'
+        replace: '# output.elasticsearch:'
+
+    - name: Отключение хостов Elasticsearch в Filebeat
+      replace:
+        path: /etc/filebeat/filebeat.yml
+        regexp: '  hosts:.*'
+        replace: '#   hosts: ["http://localhost:9200"]'
+
+    - name: Включение вывода в Logstash в Filebeat
+      blockinfile:
+        path: /etc/filebeat/filebeat.yml
+        block: |
+          output.logstash:
+            hosts: ["localhost:5044"]
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - LOGSTASH OUTPUT"
+
+    - name: Запуск Filebeat
+      service:
+        name: filebeat
+        state: restarted
+        enabled: yes
+
+    - name: Установка Logstash
+      apt:
+        name: logstash
+        state: present
+        update_cache: yes
+
+    - name: Создание конфига Logstash
+      template:
+        src: logstash.conf.j2
+        dest: /etc/logstash/conf.d/elastic_stack.conf
+        mode: 0644
+
+    - name: Перезапуск Logstash
+      service:
+        name: logstash
+        state: restarted
+        enabled: yes
+
+    - name: Тестирование просмотр статуса Logstash
+      shell: systemctl status logstash

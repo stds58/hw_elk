@@ -1,0 +1,18 @@
+input {
+  beats {
+    port => 5044
+  }
+}
+
+filter {
+  mutate {
+    gsub => ["message", "hostname=.+ addr=\\d+\\.\\d+\\.\\d+\\.\\d+", "hostname=XXX addr=xx.xx.xx.xx"]
+  }
+}
+
+output {
+  elasticsearch {
+    hosts => ["http://localhost:9200"]
+    index => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
+  }
+}
