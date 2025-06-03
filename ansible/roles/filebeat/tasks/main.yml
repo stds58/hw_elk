@@ -1,0 +1,42 @@
+---
+- name: Установка Filebeat #dpkg -i filebeat-7.12.0-amd64.deb
+  apt:
+    deb: /tmp/filebeat.deb
+    update_cache: no
+
+- name: Настройка Filebeat - раскомментировать setup.kibana.host #sudo nano /etc/filebeat/filebeat.yml  sudo rm /etc/filebeat/filebeat.yml
+  lineinfile:
+    path: /etc/filebeat/filebeat.yml
+    regexp: '^\s*#host: "localhost:5601"'
+    line: '  host: "localhost:5601"'
+    state: present
+
+- name: Включить модуль auditd в Filebeat #filebeat modules enable auditd
+  command: filebeat modules enable auditd
+
+- name: Выполнить setup Filebeat #filebeat setup -e
+  command: filebeat setup -e
+  args:
+    chdir: /
+
+- name: Restart Filebeat #systemctl restart filebeat
+  systemd:
+    name: filebeat
+    state: restarted
+
+
+
+
+#- name: Переключить вывод Filebeat с Elasticsearch на Logstash
+#  block:
+#    - name: Закомментировать output.elasticsearch
+#      lineinfile:
+#        path: /etc/filebeat/filebeat.yml
+#        regexp: '^output.elasticsearch'
+#        line: '#output.elasticsearch'
+#
+#    - name: Раскомментировать output.logstash
+#      lineinfile:
+#        path: /etc/filebeat/filebeat.yml
+#        regexp: '^#output.logstash'
+#        line: 'output.logstash: { hosts: ["localhost:5044"] }'

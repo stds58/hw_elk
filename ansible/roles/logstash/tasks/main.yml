@@ -1,0 +1,70 @@
+---
+- name: Установка Logstash #dpkg -i logstash-7.12.0-amd64.deb
+  apt:
+    deb: /tmp/logstash.deb
+    update_cache: no
+
+- name: Restart Logstash #systemctl restart logstash
+  systemd:
+    name: logstash
+    state: restarted
+
+#sudo nano /etc/filebeat/filebeat.yml  настроим Filebeat на отправку логов в Logstash
+#В /etc/filebeat/filebeat.yml закомментируем строки, диктующие направлять логи в Elastic
+#и раскомментируем те, что предписывают направлять логи в Logstash
+- name: Закомментировать output.elasticsearch
+  lineinfile:
+    path: /etc/filebeat/filebeat.yml
+    regexp: '^\s*hosts: \["localhost:9200"\]'
+    line: '  #hosts: ["localhost:9200"]'
+    state: present
+
+- name: Закомментировать заголовок output.elasticsearch
+  lineinfile:
+    path: /etc/filebeat/filebeat.yml
+    regexp: '^output.elasticsearch:$'
+    line: '#output.elasticsearch:'
+    state: present
+
+- name: Раскомментировать output.logstash
+  lineinfile:
+    path: /etc/filebeat/filebeat.yml
+    regexp: '^#output.logstash:$'
+    line: 'output.logstash:'
+    state: present
+
+- name: Раскомментировать hosts в output.logstash
+  lineinfile:
+    path: /etc/filebeat/filebeat.yml
+    regexp: '^\s*#hosts: \["localhost:5044"\]'
+    line: '  hosts: ["localhost:5044"]'
+    state: present
+
+- name: Restart Filebeat #systemctl restart filebeat
+  systemd:
+    name: filebeat
+    state: restarted
+
+- name: Создание конфигурации Logstash #sudo nano /etc/logstash/conf.d
+  template:
+    src: logstash.conf.j2
+    dest: /etc/logstash/conf.d
+
+- name: Restart Logstash #systemctl restart logstash
+  systemd:
+    name: logstash
+    state: restarted
+
+- name: Проверка состояния Logstash
+  systemd:
+    name: logstash
+    state: started
+  register: logstash_status
+  ignore_errors: yes
+  changed_when: false
+
+- name: Сообщение — Logstash запущен
+  debug:
+    msg: "Logstash {{ 'запущен' if logstash_status.state == 'started' else 'остановлен или не установлен' }}"
+
+

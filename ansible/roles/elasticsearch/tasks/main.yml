@@ -1,0 +1,46 @@
+---
+- name: Загрузка GPG ключа Elastic #wget -qO /tmp/elastic.gpg https://artifacts.elastic.co/GPG-KEY-elasticsearch
+  get_url:
+    url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    dest: /tmp/elastic.gpg
+
+- name: Перемещение GPG ключа в доверенные #sudo mv /tmp/elastic.gpg /etc/apt/trusted.gpg.d/elastic.gpg
+  copy:
+    src: /tmp/elastic.gpg
+    dest: /etc/apt/trusted.gpg.d/elastic.gpg
+    mode: '0644'
+    remote_src: yes
+
+- name: Установка Elasticsearch через APT #sudo dpkg -i elasticsearch-7.12.0-amd64.deb
+  apt:
+    deb: /tmp/elasticsearch.deb
+    update_cache: no
+  notify: Restart Elasticsearch #systemctl daemon-reload
+
+- name: Включение автозапуска и запуск Elasticsearch
+  systemd:
+    name: elasticsearch
+    enabled: yes #systemctl enable elasticsearch.service
+    state: started #systemctl start elasticsearch.service
+
+- name: Проверка работы Elasticsearch #curl http://localhost:9200
+  uri:
+    url: http://localhost:9200
+    return_content: yes
+    status_code: 200
+  register: es_check
+  until: es_check.status == 200
+  retries: 10
+  delay: 5
+
+- name: Проверка статуса Elasticsearch #systemctl status elasticsearch.service
+  systemd:
+    name: elasticsearch
+    state: started
+  register: es_status
+  changed_when: false
+  ignore_errors: yes
+
+- name: Отладка — Статус Elasticsearch
+  debug:
+    msg: "Elasticsearch {{ 'запущен' if es_status.state == 'started' else 'остановлен или неактивен' }}"

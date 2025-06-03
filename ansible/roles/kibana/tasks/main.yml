@@ -1,0 +1,39 @@
+---
+- name: Установка Kibana #dpkg -i kibana-7.12.0-amd64.deb
+  apt:
+    deb: /tmp/kibana.deb
+    update_cache: no
+
+- name: Настройка Kibana - разрешить внешний доступ #sudo nano /etc/kibana/kibana.yml Поправим server.host: "localhost”’ на server.host: "0.0.0.0"
+  lineinfile:
+    path: /etc/kibana/kibana.yml
+    regexp: '^#server.host:'
+    line: 'server.host: "0.0.0.0"'
+    state: present
+
+- name: Раскомментировать elasticsearch.hosts в Kibana #sudo nano /etc/kibana/kibana.yml раскомментируем поле: elasticsearch.hosts: ["http://localhost:9200"]
+  lineinfile:
+    path: /etc/kibana/kibana.yml
+    regexp: '^#elasticsearch.hosts:'
+    line: 'elasticsearch.hosts: ["http://localhost:9200"]'
+    state: present
+
+- name: Restart Kibana после изменения конфига #systemctl restart kibana
+  systemd:
+    name: kibana
+    state: restarted
+
+- name: Установка auditd #apt-get install -y auditd
+  apt:
+    name: auditd
+    update_cache: yes
+    state: present
+
+- name: Перезапуск auditd #systemctl restart auditd
+  systemd:
+    name: auditd
+    state: restarted
+
+- name: Отладка — Kibana доступна
+  debug:
+    msg: "Проверьте Kibanу по адресу http://{{ ansible_default_ipv4.address }}:5601"

@@ -1,0 +1,29 @@
+---
+# Пароль для bootstrap.password (в формате plain text)
+elastic_password: "SuperSecretPass123!"
+
+# Путь к директории сертификатов
+elasticsearch_cert_path: "/etc/elasticsearch/certs"
+
+# Пароль для P12-файла (должен совпадать с тем, что используется в selfcertificate)
+elasticsearch_p12_file: "{{ elasticsearch_cert_path }}/http.p12"
+elasticsearch_p12_password: "changeit"
+
+# Общее имя (CN) для сертификата
+selfcert_common_name: "vm1"
+
+# Имя хоста для CN
+elasticsearch_node_name: "vm1"
+
+
+selfcert_days_valid: 3650
+
+selfcert_ca_key: "/etc/elasticsearch/certs/ca.key"
+selfcert_ca_crt: "/etc/elasticsearch/certs/ca.crt"
+
+selfcert_server_key: "/etc/elasticsearch/certs/elk.key"
+selfcert_server_csr: "/etc/elasticsearch/certs/elk.csr"
+selfcert_server_crt: "/etc/elasticsearch/certs/elk.crt"
+selfcert_server_p12: "/etc/elasticsearch/certs/http.p12"
+
+selfcert_p12_password: "changeit"

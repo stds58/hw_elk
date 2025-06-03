@@ -1,0 +1,37 @@
+---
+- name: Установка зависимостей
+  ansible.builtin.apt:
+    name:
+      - curl
+      - wget
+      - gnupg
+      - apt-transport-https
+    update_cache: yes
+    cache_valid_time: 3600
+
+#scp C:\pitonprojekt\hw_elk\ansible\roles\common\files\elasticsearch-7.12.0-amd64.deb ubuntu@51.250.95.145:/tmp/
+- name: Копирование Elasticsearch .deb файла на сервер
+  copy:
+    src: elasticsearch-7.12.0-amd64.deb
+    dest: /tmp/elasticsearch.deb
+    mode: 0644
+
+- name: Копирование Kibana .deb файла
+  copy:
+    src: kibana-7.12.0-amd64.deb
+    dest: /tmp/kibana.deb
+    mode: 0644
+
+- name: Копирование Filebeat .deb файла
+  copy:
+    src: filebeat-7.12.0-amd64.deb
+    dest: /tmp/filebeat.deb
+    mode: 0644
+
+- name: Копирование Logstash .deb файла
+  copy:
+    src: logstash-7.12.0-amd64.deb
+    dest: /tmp/logstash.deb
+    mode: 0644
+
+
