@@ -6,7 +6,7 @@ input {
 
 filter {
   mutate {
-    gsub => ["message", "hostname=.+ addr=\\d+\\.\\d+\\.\\d+\\.\\d+", "hostname=XXX addr=xx.xx.xx.xx"]
+    gsub => ["message", "hostname=.+ addr=\d+\.\d+\.\d+\.\d+", "hostname=XXX addr=xx.xx.xx.xx"]
   }
 }
 

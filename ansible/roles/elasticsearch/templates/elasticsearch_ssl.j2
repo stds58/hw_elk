@@ -1,0 +1,22 @@
+node.name: "{{ elasticsearch_node_name }}"
+network.host: 0.0.0.0
+discovery.seed_hosts: ["localhost"]
+cluster.initial_master_nodes: ["{{ elasticsearch_node_name }}"]
+
+xpack.security.enabled: true
+xpack.security.enrollment.enabled: true
+
+xpack.security.http.ssl:
+  enabled: true
+  keystore.path: certs/http.p12
+  keystore.password: "{{ elasticsearch_p12_password }}"
+  truststore.path: certs/http.p12
+  truststore.password: "{{ elasticsearch_p12_password }}"
+
+xpack.security.transport.ssl:
+  enabled: true
+  verification_mode: certificate
+  keystore.path: certs/http.p12
+  keystore.password: "{{ elasticsearch_p12_password }}"
+  truststore.path: certs/http.p12
+  truststore.password: "{{ elasticsearch_p12_password }}"

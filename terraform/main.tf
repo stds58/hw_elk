@@ -25,6 +25,16 @@ module "security_groups_vm1" {
       protocol       = "tcp"
       port           = 22
       v4_cidr_blocks = ["0.0.0.0/0"] # Разрешаем SSH-доступ с любого IP
+    },
+    {
+      protocol       = "tcp"
+      port           = 9200
+      v4_cidr_blocks = ["0.0.0.0/0"] # Разрешаем SSH-доступ с любого IP
+    },
+    {
+      protocol       = "tcp"
+      port           = 5601
+      v4_cidr_blocks = ["0.0.0.0/0"] # Разрешаем SSH-доступ с любого IP
     }
   ]
 }
@@ -41,10 +51,10 @@ module "vm1" {
   platform_id        = "standard-v3" # Intel Ice Lake
   zone               = "ru-central1-a"
   cores              = 2
-  memory             = 2
+  memory             = 6
   core_fraction      = 100
   image_id           = data.yandex_compute_image.ubuntu.id
-  disk_size          = 20
+  disk_size          = 30
   disk_type          = "network-ssd"
   subnet_id          = module.subnetwork.subnet_id
   nat                = true
